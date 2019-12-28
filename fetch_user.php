@@ -1,4 +1,3 @@
-
 <?php
 
 //fetch_user.php
@@ -9,7 +8,7 @@ session_start();
 
 $query = "
 SELECT * FROM login 
-WHERE user_id != '".$_SESSION['user_id']."' 
+WHERE user_id != '".$_SESSION['user_id']."' order by username 
 ";
 
 $statement = $connect->prepare($query);
@@ -18,39 +17,50 @@ $statement->execute();
 
 $result = $statement->fetchAll();
 
-$output = '
-<table class="table table-bordered table-striped">
- <tr>
-  <th width="70%">Username</td>
-  <th width="20%">Status</td>
-  <th width="10%">Action</td>
- </tr>
+$output = '<div class="msgs-list">
+				<div class="msg-title" >
+					<font size="5" face="Varela Round" >Messages</font>
+					<ul>
+						<li><a href="#" title=""><i class="fa fa-cog"></i></a></li>
+						<li><a href="#" title=""><i class="fa fa-ellipsis-v"></i></a></li>
+					</ul>
+				</div>
+				
+				<div class="messages-list">
+					<ul>
 ';
 
 foreach($result as $row)
 {
  $status = '';
- $current_timestamp = strtotime(date("Y-m-d H:i:s") . '- 10 second');
- $current_timestamp = date('Y-m-d H:i:s', $current_timestamp);
- $user_last_activity = fetch_user_last_activity($row['user_id'], $connect);
- if($user_last_activity > $current_timestamp)
+ if(fetch_user_online_status($row['user_id'],$connect)==1)
  {
-  $status = '<span class="label label-success">Online</span>';
+  $status = '<span class="dot"></span>';
  }
  else
  {
-  $status = '<span class="label label-danger">Offline</span>';
+  $status = '';
  }
  $output .= '
- <tr>
-  <td>'.$row['username'].' '.count_unseen_message($row['user_id'], $_SESSION['user_id'], $connect).' '.fetch_is_type_status($row['user_id'], $connect).'</td>
-  <td>'.$status.'</td>
-  <td><button type="button" class="btn btn-info btn-xs start_chat" data-touserid="'.$row['user_id'].'" data-tousername="'.$row['username'].'">Start Chat</button></td>
- </tr>
+ 
+ <li  class="start_chat" data-touserid="'.$row['user_id'].'" data-tousername="'.$row['username'].'">
+	<div class="usr-msg-details">
+		<div class="usr-ms-img">
+			<img src="images/user_small.png" alt="">
+			
+		</div>
+		<div class="usr-mg-info">
+			<font size="4" face="Varela Round">'.$row['username'].$status.'</font>
+			'.fetch_user_last_chat($_SESSION['user_id'], $row['user_id'], $connect).'
+		'.count_unseen_message($row['user_id'], $_SESSION['user_id'], $connect).'
+	</div><!--usr-msg-details end-->
+</li>
  ';
 }
 
-$output .= '</table>';
+$output .= '</ul>
+				</div><!--messages-list end-->
+			</div><!--msgs-list end-->';
 
 echo $output;
 

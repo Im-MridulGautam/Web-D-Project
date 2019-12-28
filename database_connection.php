@@ -1,12 +1,30 @@
+<html>
+<head>  
+	<link href='https://fonts.googleapis.com/css?family=Varela Round' rel='stylesheet'>
+</head>
+</html>
 <?php
 
 //database_connection.php
 
 $connect = new PDO("mysql:host=localhost;dbname=chat;charset=utf8mb4", "root", "");
 
-
 date_default_timezone_set('Asia/Kolkata');
 
+function fetch_user_online_status($user_id, $connect)
+{
+ $current_timestamp = strtotime(date("Y-m-d H:i:s") . '- 10 second');
+ $current_timestamp = date('Y-m-d H:i:s', $current_timestamp);
+ $user_last_activity = fetch_user_last_activity($user_id, $connect);
+ if($user_last_activity > $current_timestamp)
+ {
+ return 1;
+ }
+ else
+ {
+  return 0;
+ }
+}
 function fetch_user_last_activity($user_id, $connect)
 {
  $query = "
@@ -24,7 +42,29 @@ function fetch_user_last_activity($user_id, $connect)
  }
 }
 
-
+function fetch_user_last_chat($from_user_id, $to_user_id, $connect)
+{
+	
+ $query = "
+ SELECT * FROM chat_message 
+ WHERE (from_user_id = '".$from_user_id."' 
+ AND to_user_id = '".$to_user_id."') 
+ OR (from_user_id = '".$to_user_id."' 
+ AND to_user_id = '".$from_user_id."') 
+ ORDER BY timestamp DESC LIMIT 1
+ ";
+ $statement = $connect->prepare($query);
+ $statement->execute();
+ $result = $statement->fetchAll();
+ foreach($result as $row)
+ {
+  return '<p>'.$row["chat_message"].'</p>
+		</div>
+		<span class="posted_time">'.date('d M H:i',strtotime($row["timestamp"])).'</span>
+		';  
+  
+ }
+}
 function fetch_user_chat_history($from_user_id, $to_user_id, $connect)
 {
  $query = "
@@ -33,57 +73,72 @@ function fetch_user_chat_history($from_user_id, $to_user_id, $connect)
  AND to_user_id = '".$to_user_id."') 
  OR (from_user_id = '".$to_user_id."' 
  AND to_user_id = '".$from_user_id."') 
- ORDER BY timestamp DESC
+ ORDER BY timestamp 
  ";
  $statement = $connect->prepare($query);
  $statement->execute();
  $result = $statement->fetchAll();
- $output = '<ul class="list-unstyled">';
+  if(fetch_is_type_status($to_user_id, $connect)==1)
+ {
+	 $status="Typing...";
+ }
+ else{  
+	 if(fetch_user_online_status($to_user_id, $connect)==1)
+	 {
+		 $status="Online";
+	 }
+	 else
+	 {
+		 $status="Offline";
+	 }
+ }
+ $output = '<div class="message-bar-head">
+			<div class="usr-msg-details">
+				<div class="usr-ms-img">
+					<img src="images/user_small.png" alt="">
+				</div>
+				<div class="usr-mg-info">
+					<font size="4" face="Varela Round">'.get_user_name($to_user_id, $connect).'</font>
+					<p>'.$status.'</p>
+				</div><!--usr-mg-info end-->
+			</div>
+			<a href="#" title=""><i class="fa fa-ellipsis-v"></i></a>
+		</div><!--message-bar-head end-->
+		<br><br><br><br><br><br><br><br><br>
+		
+		<div class="messages-line">';
  foreach($result as $row)
  {
   $user_name = '';
-  $dynamic_background = '';
-  $chat_message = '';
-  if($row["from_user_id"] == $from_user_id)
+  if($row["from_user_id"] != $from_user_id)
   {
-   if($row["status"] == '2')
-   {
-    $chat_message = '<em>This message has been removed</em>';
-    $user_name = '<b class="text-success">You</b>';
-   }
-   else
-   {
-    $chat_message = $row['chat_message'];
-    $user_name = '<button type="button" class="btn btn-danger btn-xs remove_chat" id="'.$row['chat_message_id'].'">x</button>&nbsp;<b class="text-success">You</b>';
-   }
-   
-
-   $dynamic_background = 'background-color:#ffe6e6;';
+   $user_name = '<div class="main-message-box st3">
+					<div class="message-dt st3">
+						<div class="message-inner-dt">
+							<p>'.$row["chat_message"].'</p>';
   }
   else
   {
-   if($row["status"] == '2')
-   {
-    $chat_message = '<em>This message has been removed</em>';
-   }
-   else
-   {
-    $chat_message = $row["chat_message"];
-   }
-   $user_name = '<b class="text-danger">'.get_user_name($row['from_user_id'], $connect).'</b>';
-   $dynamic_background = 'background-color:#ffffe6;';
+   //$user_name = '<b class="text-danger">'.get_user_name($row['from_user_id'], $connect).'</b>';
+   $user_name = '<div class="main-message-box ta-right">
+					<div class="message-dt">
+						<div class="message-inner-dt">
+							<p2>'.$row["chat_message"].'</p2>';
   }
-  $output .= '
-  <li style="border-bottom:1px dotted #ccc;padding-top:8px; padding-left:8px; padding-right:8px;'.$dynamic_background.'">
-   <p>'.$user_name.' - '.$chat_message.'
-    <div align="right">
-     - <small><em>'.$row['timestamp'].'</em></small>
-    </div>
-   </p>
-  </li>
-  ';
+  
+  
+
+		
+
+  $output .= ''.$user_name.'
+  
+		</div><!--message-inner-dt end-->
+		<span>'.date('d M  H:i',strtotime($row["timestamp"])).'</span>
+	</div><!--message-dt end-->
+</div><!--main-message-box end-->
+';
  }
- $output .= '</ul>';
+ $output .= '</div>';
  $query = "
  UPDATE chat_message 
  SET status = '0' 
@@ -95,7 +150,6 @@ function fetch_user_chat_history($from_user_id, $to_user_id, $connect)
  $statement->execute();
  return $output;
 }
-
 
 function get_user_name($user_id, $connect)
 {
@@ -123,7 +177,7 @@ function count_unseen_message($from_user_id, $to_user_id, $connect)
  $output = '';
  if($count > 0)
  {
-  $output = '<span class="label label-success">'.$count.'</span>';
+  $output = '<span class="msg-notifc">'.$count.'</span>';
  }
  return $output;
 }
@@ -144,69 +198,13 @@ function fetch_is_type_status($user_id, $connect)
  {
   if($row["is_type"] == 'yes')
   {
-   $output = ' - <small><em><span class="text-muted">Typing...</span></em></small>';
+   return 1;
+  }
+  else{
+	  return 0;
   }
  }
- return $output;
-}
-
-function fetch_group_chat_history($connect)
-{
- $query = "
- SELECT * FROM chat_message 
- WHERE to_user_id = '0'  
- ORDER BY timestamp DESC
- ";
- $statement = $connect->prepare($query);
- $statement->execute();
- $result = $statement->fetchAll();
- $output = '<ul class="list-unstyled">';
- foreach($result as $row)
- {
-  $user_name = '';
-  $chat_message = '';
-  $dynamic_background = '';
-
-  if($row['from_user_id'] == $_SESSION['user_id'])
-  {
-   if($row["status"] == '2')
-   {
-    $chat_message = '<em>This message has been removed</em>';
-    $user_name = '<b class="text-success">You</b>';
-   }
-   else
-   {
-    $chat_message = $row['chat_message'];
-    $user_name = '<button type="button" class="btn btn-danger btn-xs remove_chat" id="'.$row['chat_message_id'].'">x</button>&nbsp;<b class="text-success">You</b>';
-   }
-   $dynamic_background = 'background-color:#ffe6e6;';
-  }
-  else
-  {
-   if($row["status"] == '2')
-   {
-    $chat_message = '<em>This message has been removed</em>';
-   }
-   else
-   {
-    $chat_message = $row['chat_message'];
-   }
-   $user_name = '<b class="text-danger">'.get_user_name($row['from_user_id'], $connect).'</b>';
-   $dynamic_background = 'background-color:#ffffe6;';
-  }
-  $output .= '
-  <li style="border-bottom:1px dotted #ccc;padding-top:8px; padding-left:8px; padding-right:8px;'.$dynamic_background.'">
-   <p>'.$user_name.' - '.$chat_message.' 
-    <div align="right">
-     - <small><em>'.$row['timestamp'].'</em></small>
-    </div>
-   </p>
-   
-  </li>
-  ';
- }
- $output .= '</ul>';
- return $output;
+ 
 }
 
 

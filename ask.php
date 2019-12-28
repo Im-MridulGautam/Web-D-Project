@@ -1,36 +1,17 @@
-<?php
-    session_start(); //we need session for the log in thingy XD 
-    include("functions.php");
-?>
-<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-    <meta name="description" content="">
-    <meta name="author" content="">
-
-
-    <title>Signin Template for Bootstrap</title>
-
-    <!-- Bootstrap core CSS -->
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
-
-
-  </head>
-    <?php
-        if(isset($_POST['upload'])){
+ <html>
+ <?php
+       if(isset($_POST['upload'])){
             
-			$describe = $_POST['describe'];
+			
             $imagename = $_FILES['file']['name'];
 			$tempname = $_FILES['file']['tmp_name'];
 			
-			move_uploaded_file($tempname,"question/".$imagename);
+			move_uploaded_file($tempname,"login/".$imagename);
 			
             
             
             $con=mysqli_connect("localhost","root","","chat");
-            $query = "INSERT INTO `question` ( `describe`, `image` ) VALUES ( '$describe', '$imagename' )";
+            $query = "INSERT INTO `login` (  `cimg` ) VALUES ( '$imagename' )";
 			
 			if(performQuery($query)){
                 echo "<script>alert('Your account request is now pending for approval. Please wait for confirmation. Thank you.')</script>";
@@ -42,7 +23,7 @@
         }
     
     ?>
-  <body class="text-center">
+	<body class="text-center">
       <div class="container">
             <form method="post" class="form-signin" enctype="multipart/form-data">
               <img class="mb-4" src="https://getbootstrap.com/assets/brand/bootstrap-solid.svg" alt="" width="72" height="72">
